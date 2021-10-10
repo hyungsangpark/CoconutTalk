@@ -1,8 +1,7 @@
 from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QGridLayout, QLineEdit
 
-from connected import ConnectedWidget
-
+from coconuttalk.gui.connected import ConnectedWidget
 
 class ConnectionWidget(QWidget):
 
