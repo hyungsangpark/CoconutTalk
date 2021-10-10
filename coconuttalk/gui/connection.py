@@ -1,6 +1,8 @@
 from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QGridLayout, QLineEdit
 
+from connected import ConnectedWidget
+
 
 class ConnectionWidget(QWidget):
 
@@ -57,3 +59,12 @@ class ConnectionWidget(QWidget):
         print(f"IP Address: {self.ip_address_line_edit.text()}")
         print(f"Port: {self.port_line_edit.text()}")
         print(f"Nickname: {self.nickname_line_edit.text()}")
+
+        self.connected_widget = ConnectedWidget(
+            self.ip_address_line_edit.text(),
+            self.port_line_edit.text(),
+            self.nickname_line_edit.text()
+        )
+        self.connected_widget.show()
+        self.close()
+
