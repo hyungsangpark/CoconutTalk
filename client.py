@@ -1,27 +1,27 @@
 import select
 import socket
 import sys
-import signal
-import argparse
 
 from PyQt5.QtCore import QCoreApplication
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QTextBrowser, QPushButton, QListWidget, \
-    QListWidgetItem, QInputDialog, QLineEdit, QGridLayout
+from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel, QHBoxLayout, QPushButton, QListWidget,
+                             QListWidgetItem, QInputDialog, QLineEdit, QGridLayout)
 
-from PyQt5.QtWidgets import QApplication
+from server import ChatServer
+from utils import *
+
+SERVER_HOST = "localhost"
 
 
 class ConnectedWidget(QWidget):
 
-    def __init__(self, ip_address: str, port: str, nickname: str, client: ChatClient) -> None:
+    def __init__(self, ip_address: str, port: int, nickname: str) -> None:
         super().__init__()
 
         self.chat_rooms = QListWidget()
         self.connected_clients = QListWidget()
         self.ip_address: str = ip_address
-        self.port: str = port
+        self.port: int = port
         self.nickname: str = nickname
-        self.client: ChatClient = client
 
         self.initUI()
 
@@ -137,20 +137,80 @@ class ConnectionWidget(QWidget):
         print(f"Port: {port}")
         print(f"Nickname: {nickname}")
 
-        # Check whether a server pre-exists; use it if it exists, else create one.
+        client = ChatClient(name=nickname, host=ip_address, port=port)
 
-        try:
-            client = ChatClient(name=nickname, host=ip_address, port=port)
-        except socket.error:
-            #  extract this into a separate thread.
-            # threading.Thread(target=lambda: ChatServer(host=ip_address, port=port))
-            self.server = ChatServer(host=ip_address, port=port)
-
-            client = ChatClient(name=nickname, host=ip_address, port=port)
-
-        self.connected_widget = ConnectedWidget(ip_address, port, nickname, client)
+        self.connected_widget = ConnectedWidget(ip_address, port, nickname)
         self.connected_widget.show()
         self.close()
+
+
+class ChatClient():
+    """ A command line chat client using select """
+
+    def __init__(self, name, port, host=SERVER_HOST):
+        self.name = name
+        self.connected = False
+        self.host = host
+        self.port = port
+
+        # Initial prompt
+        self.prompt = f'[{name}@{socket.gethostname()}]> '
+
+        # Connect to server at port
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.connect((host, self.port))
+            print(f'Now connected to chat server@ port {self.port}')
+            self.connected = True
+
+            # Send my name...
+            send(self.sock, 'NAME: ' + self.name)
+            data = receive(self.sock)
+
+            # Contains client address, set it
+            addr = data.split('CLIENT: ')[1]
+            self.prompt = '[' + '@'.join((self.name, addr)) + ']> '
+        except socket.error as e:
+            print(f'Failed to connect to chat server @ port {self.port}')
+            sys.exit(1)
+
+    def cleanup(self):
+        """Close the connection and wait for the thread to terminate."""
+        self.sock.close()
+
+    def run(self):
+        """ Chat client main loop """
+        while self.connected:
+            try:
+                sys.stdout.write(self.prompt)
+                sys.stdout.flush()
+
+                # Wait for input from stdin and socket
+                readable, writeable, exceptional = select.select(
+                    [0, self.sock], [], [])
+
+                for sock in readable:
+                    if sock == 0:
+                        data = sys.stdin.readline().strip()
+                        if data == "GET_ALL_CLIENTS":
+                            send(self.sock, data)
+                            print(f"{self.prompt}{receive_clients(self.sock)}")
+                        elif data:
+                            send(self.sock, data)
+                    elif sock == self.sock:
+                        data = receive(self.sock)
+                        if not data:
+                            print('Client shutting down.')
+                            self.connected = False
+                            break
+                        else:
+                            sys.stdout.write(data + '\n')
+                            sys.stdout.flush()
+
+            except KeyboardInterrupt:
+                print(" Client interrupted. """)
+                self.cleanup()
+                break
 
 
 if __name__ == "__main__":
