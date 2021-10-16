@@ -134,3 +134,7 @@ dmypy.json
 # SSL files
 *.pem
 */*.pem
+
+# Reference purposed file
+lab7/
+examples/
