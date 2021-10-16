@@ -2,10 +2,11 @@ import select
 import socket
 import sys
 import time
+from typing import Union
 
-from PyQt5.QtCore import QCoreApplication
+from PyQt5.QtCore import QCoreApplication, Qt
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel, QHBoxLayout, QPushButton, QListWidget,
-                             QListWidgetItem, QInputDialog, QLineEdit, QGridLayout)
+                             QListWidgetItem, QInputDialog, QLineEdit, QGridLayout, QMessageBox)
 
 from utils import *
 
@@ -44,11 +45,11 @@ class ChatClient:
             # Contains client address, set it
             addr = data.split('CLIENT: ')[1]
             self.prompt = '[' + '@'.join((self.name, addr)) + ']> '
-        except socket.error as e:
+        except socket.error:
             print(f'Failed to connect to chat server @ port {self.port}')
-            sys.exit(1)
+            raise socket.error
 
-    def getallclients(self) -> list[Client]:
+    def get_all_clients(self) -> list[Client]:
         """
         Retrieves list of clients currently connected to the server.
         :return: A tuple with list of client information
@@ -108,14 +109,15 @@ class ConnectedWidget(QWidget):
 
         self.chat_rooms = QListWidget()
         self.connected_clients = QListWidget()
-        self.ip_address: str = ip_address
-        self.port: int = port
+        self.server_ip_address: str = ip_address
+        self.server_port: int = port
+        self.port: int = -1
         self.nickname: str = nickname
         self.client: ChatClient = client
 
-        self.initUI()
+        self.init_ui()
 
-    def initUI(self) -> None:
+    def init_ui(self) -> None:
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
 
@@ -128,10 +130,13 @@ class ConnectedWidget(QWidget):
         # self.connected_clients.addItem(QListWidgetItem(f"{self.nickname} [me] (now)"))
 
         # Retrieve a list of clients currently connected and list them in the list of clients.
-        clients = self.client.getallclients()
-        clients = list(filter(lambda c: c[1] != self.nickname, clients))
+        clients = self.client.get_all_clients()
+        myself = next(client for client in clients if client[1] == self.nickname)
+        self.port = myself[0][1]
+        clients.remove(myself)
+        # clients = list(filter(lambda c: c[1] != self.nickname, clients))
         current_time = time.time()
-        clients.append(((self.ip_address, self.port), f"{self.nickname} [me]", current_time))
+        clients.append(((self.server_ip_address, self.server_port), f"{self.nickname} [me]", current_time))
 
         for client in clients:
             seconds_elapsed = current_time - client[2]
@@ -146,7 +151,11 @@ class ConnectedWidget(QWidget):
             else:
                 time_passed = f"{int(secs)} sec ago"
 
-            self.connected_clients.addItem(QListWidgetItem(f"{client[1]} ({time_passed})"))
+            client_list_widget_item = QListWidgetItem(f"{client[1]} ({time_passed})")
+            client_list_widget_item.setData(Qt.UserRole, client[0][1])
+            self.connected_clients.addItem(client_list_widget_item)
+
+        self.connected_clients.currentItem()
 
         connected_clients_layout.addWidget(self.connected_clients)
         chat_button = QPushButton("1:1 Chat", self)
@@ -175,8 +184,8 @@ class ConnectedWidget(QWidget):
         close_button.clicked.connect(QCoreApplication.instance().quit)
         main_layout.addWidget(close_button)
 
-        main_layout.addWidget(QLabel(f"IP Address: {self.ip_address}"))
-        main_layout.addWidget(QLabel(f"Port: {self.port}"))
+        main_layout.addWidget(QLabel(f"IP Address: {self.server_ip_address}"))
+        main_layout.addWidget(QLabel(f"Port: {self.server_port}"))
         main_layout.addWidget(QLabel(f"Nickname: {self.nickname}"))
 
         self.setWindowTitle("CoconutTalk")
@@ -184,11 +193,32 @@ class ConnectedWidget(QWidget):
         self.show()
 
     def one_to_one_chat(self) -> None:
-        print("hi")
+        client_to_chat_port = self.connected_clients.currentItem().data(Qt.UserRole)
+        print("port: " + str(client_to_chat_port))
+
+        created_room = False
+        while not created_room:
+            send(self.client.sock, f"CREATEROOM:{self.port}_to_{client_to_chat_port}:{client_to_chat_port}")
+            result = receive(self.client.sock)
+            if result == "SUCCESS":
+                created_room = True
+
+        # Link to 1:1 chat
 
     def create_chatroom(self) -> None:
         text, ok = QInputDialog.getText(self, 'Create Chat Room', "Enter new chat room name:")
         if ok:
+            created_room = False
+            while not created_room:
+                send(self.client.sock, f"CREATEROOM:{text}:null")
+                result = receive(self.client.sock)
+                if result == "SUCCESS":
+                    created_room = True
+                else:
+                    text, _ = QInputDialog.getText(self,
+                                                   "Create Chat Room",
+                                                   "Chat room with the given name already exists.\n" +
+                                                   "Enter a new chat room name:")
             self.chat_rooms.addItem(QListWidgetItem(text))
 
 
@@ -202,9 +232,9 @@ class ConnectionWidget(QWidget):
         self.nickname_line_edit = QLineEdit()
         self.port_line_edit = QLineEdit()
         self.ip_address_line_edit = QLineEdit()
-        self.initUI()
+        self.init_ui()
 
-    def initUI(self) -> None:
+    def init_ui(self) -> None:
         """
         Initializes the UI of the program and displays it.
         """
@@ -270,11 +300,16 @@ class ConnectionWidget(QWidget):
         print(f"Port: {port}")
         print(f"Nickname: {nickname}")
 
-        client = ChatClient(name=nickname, host=ip_address, port=port)
-
-        self.connected_widget = ConnectedWidget(ip_address, port, nickname, client)
-        self.connected_widget.show()
-        self.close()
+        try:
+            client = ChatClient(name=nickname, host=ip_address, port=port)
+            self.connected_widget = ConnectedWidget(ip_address, port, nickname, client)
+            self.connected_widget.show()
+            self.close()
+        except socket.error:
+            notify_exit = QMessageBox()
+            notify_exit.setText("Server could not be found!")
+            notify_exit.setInformativeText("Please start the server before the client.\nThe program will now exit.")
+            notify_exit.exec()
 
 
 if __name__ == "__main__":

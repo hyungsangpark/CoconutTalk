@@ -3,23 +3,29 @@ import socket
 import sys
 import signal
 import argparse
+import time
 
 from utils import *
+
+# Custom type used to denote client, format is as follows:
+# ((ip_addresss, port), name, connected_time)
+Client = tuple[tuple[str, int], str, float]
 
 SERVER_HOST = 'localhost'
 
 
-class ChatServer(object):
+class ChatServer:
     """ An example chat server using select """
 
     def __init__(self, port, backlog=5):
         self.clients = 0
-        self.clientmap = {}
+        self.client_map: dict[socket.socket, Client] = {}
+        self.rooms: dict[str, list[socket.socket]] = {}
         self.outputs = []  # list output sockets
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server.bind((SERVER_HOST, port))
-        self.server.listen(backlog)
+        self.server_socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server_socket.bind((SERVER_HOST, port))
+        self.server_socket.listen(backlog)
         # Catch keyboard interrupts
         signal.signal(signal.SIGINT, self.sighandler)
 
@@ -33,16 +39,27 @@ class ChatServer(object):
         for output in self.outputs:
             output.close()
 
-        self.server.close()
+        self.server_socket.close()
 
     def get_client_name(self, client):
         """ Return the name of the client """
-        info = self.clientmap[client]
+        info = self.client_map[client]
         host, name = info[0][0], info[1]
         return '@'.join((name, host))
 
+    def get_client_socket(self, port_num: int) -> socket.socket:
+        f"""
+        Given a port number of a client, it returns the socket instance of the client.
+        
+        :param port_num: Port of the client socket to find.
+        :return: socket instance of the client with the given port.
+        """
+        for client_socket, client_info in self.client_map.items():
+            if client_info[0][1] == port_num:
+                return client_socket
+
     def run(self):
-        inputs = [self.server, sys.stdin]
+        inputs = [self.server_socket, sys.stdin]
         self.outputs = []
         running = True
         while running:
@@ -54,9 +71,9 @@ class ChatServer(object):
 
             for sock in readable:
                 sys.stdout.flush()
-                if sock == self.server:
+                if sock == self.server_socket:
                     # handle the server socket
-                    client, address = self.server.accept()
+                    client, address = self.server_socket.accept()
                     print(
                         f'Chat server: got connection {client.fileno()} from {address}')
                     # Read the login name
@@ -67,7 +84,7 @@ class ChatServer(object):
                     send(client, f'CLIENT: {str(address[0])}')
                     inputs.append(client)
 
-                    self.clientmap[client] = (address, cname)
+                    self.client_map[client] = (address, cname, time.time())
                     # Send joining information to other clients
                     msg = f'\n(Connected: New client ({self.clients}) from {self.get_client_name(client)})'
                     for output in self.outputs:
@@ -79,7 +96,7 @@ class ChatServer(object):
                     # handle standard input
                     cmd = sys.stdin.readline().strip()
                     if cmd == 'list':
-                        print(self.clientmap.values())
+                        print(self.client_map.values())
                     elif cmd == 'quit':
                         running = False
                 else:
@@ -87,7 +104,23 @@ class ChatServer(object):
                     try:
                         data = receive(sock)
                         if data == "GET_ALL_CLIENTS":
-                            send_clients(sock, self.clientmap.values())
+                            send_clients(sock, self.client_map.values())
+
+                        elif data.startswith("CREATEROOM:"):
+                            _, room_name, chatting_client_port = data.split(":")
+                            message = ""
+                            try:
+                                _ = self.rooms[room_name]
+                                message = "Room with given name already exists. Please try a different name."
+                            except KeyError:
+                                self.rooms[room_name] = [sock]
+                                if chatting_client_port != "null":
+                                    self.rooms[room_name].append(self.get_client_socket(int(chatting_client_port)))
+                                message = "SUCCESS"
+                            finally:
+                                print(message + f"\nRoom: {room_name} has been created.")
+                                send(sock, message)
+
                         elif data:
                             # Send as new client's message...
                             msg = f'\n#[{self.get_client_name(sock)}]>> {data}'
@@ -105,6 +138,7 @@ class ChatServer(object):
 
                             # Sending client leaving information to others
                             msg = f'\n(Now hung up: Client from {self.get_client_name(sock)})'
+                            self.client_map.pop(sock)
 
                             for output in self.outputs:
                                 send(output, msg)
@@ -113,7 +147,7 @@ class ChatServer(object):
                         inputs.remove(sock)
                         self.outputs.remove(sock)
 
-        self.server.close()
+        self.server_socket.close()
 
 
 if __name__ == "__main__":
