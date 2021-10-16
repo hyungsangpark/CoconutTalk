@@ -1,12 +1,17 @@
 import select
 import socket
 import sys
+import time
 
 from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel, QHBoxLayout, QPushButton, QListWidget,
                              QListWidgetItem, QInputDialog, QLineEdit, QGridLayout)
 
 from utils import *
+
+# Custom type used to denote client, format is as follows:
+# ((ip_addresss, port), name, connected_time)
+Client = tuple[tuple[str, int], str, float]
 
 SERVER_HOST = "localhost"
 
@@ -43,7 +48,7 @@ class ChatClient:
             print(f'Failed to connect to chat server @ port {self.port}')
             sys.exit(1)
 
-    def getallclients(self) -> list[tuple[tuple[str, int], str]]:
+    def getallclients(self) -> list[Client]:
         """
         Retrieves list of clients currently connected to the server.
         :return: A tuple with list of client information
@@ -122,17 +127,32 @@ class ConnectedWidget(QWidget):
         # Components inside connected_clients_layout
         # self.connected_clients.addItem(QListWidgetItem(f"{self.nickname} [me] (now)"))
 
+        # Retrieve a list of clients currently connected and list them in the list of clients.
         clients = self.client.getallclients()
-        clients.append(((self.ip_address, self.port), f"{self.nickname} [me] (now)"))
+        clients = list(filter(lambda c: c[1] != self.nickname, clients))
+        current_time = time.time()
+        clients.append(((self.ip_address, self.port), f"{self.nickname} [me]", current_time))
 
         for client in clients:
-            self.connected_clients.addItem(QListWidgetItem(f"{client[1]}"))
+            seconds_elapsed = current_time - client[2]
+            hours, rest = divmod(seconds_elapsed, 3600)
+            mins, secs = divmod(rest, 60)
+            if hours > 0:
+                time_passed = f"{int(hours)} hour ago"
+            elif mins > 0:
+                time_passed = f"{int(mins)} min ago"
+            elif secs == 0:
+                time_passed = "now"
+            else:
+                time_passed = f"{int(secs)} sec ago"
+
+            self.connected_clients.addItem(QListWidgetItem(f"{client[1]} ({time_passed})"))
 
         connected_clients_layout.addWidget(self.connected_clients)
         chat_button = QPushButton("1:1 Chat", self)
         connected_clients_layout.addWidget(chat_button)
         # TODO: Modify this to a proper listener behaviour.
-        chat_button.clicked.connect(lambda: self.connected_clients.addItem(QListWidgetItem("Hii")))
+        chat_button.clicked.connect(self.one_to_one_chat)
 
         main_layout.addWidget(QLabel("Chat rooms (Group Chat)"))
 
@@ -146,7 +166,7 @@ class ConnectedWidget(QWidget):
         chat_rooms_layout.addLayout(chat_rooms_buttons)
 
         create_chat_room_button = QPushButton("Create", self)
-        create_chat_room_button.clicked.connect(self.createChatRoom)
+        create_chat_room_button.clicked.connect(self.create_chatroom)
         chat_rooms_buttons.addWidget(create_chat_room_button)
         join_chat_room_button = QPushButton("Join", self)
         chat_rooms_buttons.addWidget(join_chat_room_button)
@@ -163,7 +183,10 @@ class ConnectedWidget(QWidget):
         self.setGeometry(300, 300, 300, 200)
         self.show()
 
-    def createChatRoom(self) -> None:
+    def one_to_one_chat(self) -> None:
+        print("hi")
+
+    def create_chatroom(self) -> None:
         text, ok = QInputDialog.getText(self, 'Create Chat Room', "Enter new chat room name:")
         if ok:
             self.chat_rooms.addItem(QListWidgetItem(text))
