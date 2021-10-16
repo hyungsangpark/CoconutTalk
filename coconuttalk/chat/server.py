@@ -1,8 +1,7 @@
-import select
-import socket
-import sys
-import signal
 import argparse
+import select
+import signal
+import sys
 
 from utils import *
 

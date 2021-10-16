@@ -8,28 +8,30 @@ from utils import *
 
 SERVER_HOST = 'localhost'
 
+
 class ChatClient():
     """ A command line chat client using select """
+
     def __init__(self, name, port, host=SERVER_HOST):
         self.name = name
         self.connected = False
         self.host = host
         self.port = port
-        
+
         # Initial prompt
         self.prompt = f'[{name}@{socket.gethostname()}]> '
-        
+
         # Connect to server at port
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect((host, self.port))
             print(f'Now connected to chat server@ port {self.port}')
             self.connected = True
-            
+
             # Send my name...
             send(self.sock, 'NAME: ' + self.name)
             data = receive(self.sock)
-            
+
             # Contains client address, set it
             addr = data.split('CLIENT: ')[1]
             self.prompt = '[' + '@'.join((self.name, addr)) + ']> '
@@ -71,6 +73,7 @@ class ChatClient():
                 print(" Client interrupted. """)
                 self.cleanup()
                 break
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
