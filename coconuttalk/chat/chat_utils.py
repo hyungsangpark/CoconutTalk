@@ -2,6 +2,11 @@ import socket
 import pickle
 import struct
 
+# Custom type used to denote client, format is as follows:
+# ((ip_addresss, port), name, connected_time)
+Client = tuple[tuple[str, int], str, float]
+SERVER_HOST = "localhost"
+
 
 def send(channel: socket.socket, *args) -> None:
     """
