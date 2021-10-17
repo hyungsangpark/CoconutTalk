@@ -9,31 +9,34 @@ class ChatClient:
     A command line chat client using select
     """
 
-    def __init__(self, name, port, host=SERVER_HOST):
-        self.name = name
+    def __init__(self, nickname, port, host=SERVER_HOST):
+        self.nickname = nickname
         self.connected = False
-        self.host = host
-        self.port = port
+        self.server_address = host
+        self.server_port = port
+        # Following are fields which are also included in the client:
+        # self.connected_address
+        # self.connected_port
 
         # Initial prompt
-        self.prompt = f'[{name}@{socket.gethostname()}]> '
+        self.prompt = f'[{nickname}@{socket.gethostname()}]> '
 
         # Connect to server at port
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((host, self.port))
-            print(f'Now connected to chat server@ port {self.port}')
+            self.sock.connect((host, self.server_port))
+            print(f'Now connected to chat server@ port {self.server_port}')
             self.connected = True
 
             # Send my name...
-            send(self.sock, 'NAME: ' + self.name)
+            send(self.sock, 'NAME: ' + self.nickname)
             data = receive(self.sock)
 
             # Contains client address, set it
-            addr = data.split('CLIENT: ')[1]
-            self.prompt = '[' + '@'.join((self.name, addr)) + ']> '
+            self.connected_address, self.connected_port = data.split('CLIENT: ')
+            self.prompt = '[' + '@'.join((self.nickname, self.connected_address)) + ']> '
         except socket.error:
-            print(f'Failed to connect to chat server @ port {self.port}')
+            print(f'Failed to connect to chat server @ port {self.server_port}')
             raise socket.error
 
     def get_all_clients(self) -> list[Client]:

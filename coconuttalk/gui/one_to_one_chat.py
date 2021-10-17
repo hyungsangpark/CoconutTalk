@@ -7,13 +7,12 @@ from coconuttalk.chat.chat_utils import send
 
 
 class OneToOneChatWidget(QDialog):
-    def __init__(self, nickname: str, other_client_nickname: str, other_client_port: int, client: ChatClient,
+    def __init__(self, other_client_nickname: str, other_client_port: int, client: ChatClient,
                  parent=None) -> None:
         super().__init__(parent)
 
         self.setWindowTitle("1:1 Chat")
 
-        self.nickname = nickname
         self.other_client_nickname = other_client_nickname
         self.other_client_port = other_client_port
         self.client = client
@@ -46,7 +45,7 @@ class OneToOneChatWidget(QDialog):
         Removes the chat in the server, then closes the chat.
         :return: Remove chat
         """
-        send(self.client.sock, "CLOSEROOM:{self.}_to_{}")
+        send(self.client.sock, f"CLOSEROOM:{self.client.connected_port}_to_{self.other_client_port}")
         self.close()
 
     def send(self) -> None:

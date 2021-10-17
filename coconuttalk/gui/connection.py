@@ -86,8 +86,8 @@ class ConnectionWidget(QWidget):
         print(f"Nickname: {nickname}")
 
         try:
-            client = ChatClient(name=nickname, host=ip_address, port=port)
-            self.connected_widget = ConnectedWidget(ip_address, port, nickname, client)
+            client = ChatClient(nickname=nickname, host=ip_address, port=port)
+            self.connected_widget = ConnectedWidget(client)
             self.connected_widget.show()
             self.close()
         except socket.error:

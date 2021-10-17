@@ -11,15 +11,12 @@ from coconuttalk.gui.one_to_one_chat import OneToOneChatWidget
 
 class ConnectedWidget(QWidget):
 
-    def __init__(self, ip_address: str, port: int, nickname: str, client: ChatClient) -> None:
+    def __init__(self, client: ChatClient) -> None:
         super().__init__()
 
         self.chat_rooms = QListWidget()
         self.connected_clients = QListWidget()
-        self.server_ip_address: str = ip_address
-        self.server_port: int = port
         self.port: int = -1
-        self.nickname: str = nickname
         self.client: ChatClient = client
         self.one_to_one_chat_widgets = []
 
@@ -35,16 +32,19 @@ class ConnectedWidget(QWidget):
         main_layout.addLayout(connected_clients_layout)
 
         # Components inside connected_clients_layout
-        # self.connected_clients.addItem(QListWidgetItem(f"{self.nickname} [me] (now)"))
+        # self.connected_clients.addItem(QListWidgetItem(f"{self.client.name} [me] (now)"))
 
         # Retrieve a list of clients currently connected and list them in the list of clients.
         clients = self.client.get_all_clients()
-        myself = next(client for client in clients if client[1] == self.nickname)
-        self.port = myself[0][1]
-        clients.remove(myself)
-        # clients = list(filter(lambda c: c[1] != self.nickname, clients))
+        # myself = next(client for client in clients if client[1] == self.client.nickname)
+        # self.port = myself[0][1]
+        clients.remove(next(client for client in clients if client[1] == self.client.nickname))
+        # clients = list(filter(lambda c: c[1] != self.client.name, clients))
         current_time = time.time()
-        clients.append(((self.server_ip_address, self.server_port), f"{self.nickname} [me]", current_time))
+        clients.append((
+            (self.client.server_address, self.client.server_port),
+            f"{self.client.nickname} [me]",
+            current_time))
 
         for client in clients:
             seconds_elapsed = current_time - client[2]
@@ -92,9 +92,9 @@ class ConnectedWidget(QWidget):
         close_button.clicked.connect(QCoreApplication.instance().quit)
         main_layout.addWidget(close_button)
 
-        main_layout.addWidget(QLabel(f"IP Address: {self.server_ip_address}"))
-        main_layout.addWidget(QLabel(f"Port: {self.server_port}"))
-        main_layout.addWidget(QLabel(f"Nickname: {self.nickname}"))
+        main_layout.addWidget(QLabel(f"IP Address: {self.client.server_address}"))
+        main_layout.addWidget(QLabel(f"Port: {self.client.server_port}"))
+        main_layout.addWidget(QLabel(f"Nickname: {self.client.nickname}"))
 
         self.setWindowTitle("CoconutTalk")
         self.setGeometry(300, 300, 300, 200)
@@ -107,26 +107,18 @@ class ConnectedWidget(QWidget):
 
         created_room = False
         while not created_room:
-            send(self.client.sock, f"CREATEROOM:{self.port}_to_{client_to_chat_port}:{client_to_chat_port}")
+            send(self.client.sock, f"CREATEROOM:{self.client.connected_port}_to_{client_to_chat_port}:{client_to_chat_port}")
             result = receive(self.client.sock)
             if result == "SUCCESS":
                 created_room = True
 
         # Link to 1:1 chat and close connected screen.
-        one_to_one_chat_dialog = OneToOneChatWidget(nickname=self.nickname,
+        one_to_one_chat_dialog = OneToOneChatWidget(nickname=self.client.nickname,
                                                     other_client_nickname=client_to_chat_nickname,
                                                     other_client_port=client_to_chat_port,
                                                     client=self.client,
                                                     parent=self)
         one_to_one_chat_dialog.exec()
-
-        # one_to_one_chat_widget = OneToOneChatWidget(nickname=self.nickname,
-        #                                             other_client_nickname=client_to_chat_nickname,
-        #                                             client=self.client,
-        #                                             parent=self)
-        # # self.one_to_one_chat_widgets.append(one_to_one_chat_widget)
-        # one_to_one_chat_widget.show()
-        # self.close()
 
     def create_chatroom(self) -> None:
         text, ok = QInputDialog.getText(self, 'Create Chat Room', "Enter new chat room name:")
