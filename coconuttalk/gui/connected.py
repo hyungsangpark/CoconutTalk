@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QWidget, QListWidget, QVBoxLayout, QLabel, QHBoxLayo
     QInputDialog
 
 from coconuttalk.chat.chat_client import ChatClient
-from coconuttalk.chat.chat_utils import *
+from coconuttalk.chat.utils import *
 from coconuttalk.gui.one_to_one_chat import OneToOneChatWidget
 
 
@@ -113,8 +113,7 @@ class ConnectedWidget(QWidget):
                 created_room = True
 
         # Link to 1:1 chat and close connected screen.
-        one_to_one_chat_dialog = OneToOneChatWidget(nickname=self.client.nickname,
-                                                    other_client_nickname=client_to_chat_nickname,
+        one_to_one_chat_dialog = OneToOneChatWidget(other_client_nickname=client_to_chat_nickname,
                                                     other_client_port=client_to_chat_port,
                                                     client=self.client,
                                                     parent=self)

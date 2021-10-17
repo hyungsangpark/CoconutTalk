@@ -3,7 +3,7 @@ import signal
 import sys
 import time
 
-from coconuttalk.chat.chat_utils import *
+from coconuttalk.chat.utils import *
 
 
 class ChatServer:
@@ -73,7 +73,7 @@ class ChatServer:
 
                     # Compute client name and send back
                     self.clients += 1
-                    send(client, f'CLIENT: {str(address[0])}')
+                    send(client, f'CLIENT: {str(address[0])}:{str(address[1])}')
                     inputs.append(client)
 
                     self.client_map[client] = (address, cname, time.time())
@@ -95,6 +95,7 @@ class ChatServer:
                     # handle all other sockets
                     try:
                         data = receive(sock)
+                        print("data: " + data)
                         if data == "GET_ALL_CLIENTS":
                             send_clients(sock, self.client_map.values())
 
@@ -143,7 +144,7 @@ class ChatServer:
 
                             for output in self.outputs:
                                 send(output, msg)
-                    except socket.error as e:
+                    except socket.error:
                         # Remove
                         inputs.remove(sock)
                         self.outputs.remove(sock)

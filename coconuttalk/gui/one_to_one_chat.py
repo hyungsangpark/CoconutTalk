@@ -1,9 +1,10 @@
 import time
+from threading import Thread
 
 from PyQt5.QtWidgets import QDialog, QTextBrowser, QVBoxLayout, QLabel, QHBoxLayout, QLineEdit, QPushButton
 
 from coconuttalk.chat.chat_client import ChatClient
-from coconuttalk.chat.chat_utils import send
+from coconuttalk.chat.utils import send
 
 
 class OneToOneChatWidget(QDialog):
@@ -23,6 +24,10 @@ class OneToOneChatWidget(QDialog):
 
         self.init_ui()
 
+        self.fetch_message_thread_alive = True
+        self.fetch_message_thread = Thread(target=self.fetch_message, args=(lambda: self.fetch_message_thread_alive, ))
+        self.fetch_message_thread.start()
+
     def init_ui(self) -> None:
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
@@ -37,16 +42,27 @@ class OneToOneChatWidget(QDialog):
         main_layout.addLayout(chats_container)
 
         close_button = QPushButton("Close", self)
-        close_button.clicked.connect(self.accept)
+        close_button.clicked.connect(self.close_chat)
         main_layout.addWidget(close_button)
 
-    def close(self) -> None:
+    def fetch_message(self, is_thread_alive) -> None:
+        print("Start Thread!")
+        while True:
+            time.sleep(2)
+            print("yes, thread is running...")
+            self.chats.append("James (08:23): Yes, thread is running...")
+            if not is_thread_alive():
+                break
+        print("thread ended.")
+
+    def close_chat(self) -> None:
         """
         Removes the chat in the server, then closes the chat.
         :return: Remove chat
         """
+        self.fetch_message_thread_alive = False
         send(self.client.sock, f"CLOSEROOM:{self.client.connected_port}_to_{self.other_client_port}")
-        self.close()
+        self.accept()
 
     def send(self) -> None:
         message: str = self.chats_input.text()

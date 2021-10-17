@@ -1,7 +1,7 @@
 import select
 import sys
 
-from coconuttalk.chat.chat_utils import *
+from coconuttalk.chat.utils import *
 
 
 class ChatClient:
@@ -12,11 +12,11 @@ class ChatClient:
     def __init__(self, nickname, port, host=SERVER_HOST):
         self.nickname = nickname
         self.connected = False
-        self.server_address = host
-        self.server_port = port
-        # Following are fields which are also included in the client:
-        # self.connected_address
-        # self.connected_port
+        self.server_address: str = host
+        self.server_port: int = port
+        # Default (invalid) values for connected address and port.
+        self.connected_address: str = ""
+        self.connected_port: int = -1
 
         # Initial prompt
         self.prompt = f'[{nickname}@{socket.gethostname()}]> '
@@ -33,7 +33,9 @@ class ChatClient:
             data = receive(self.sock)
 
             # Contains client address, set it
-            self.connected_address, self.connected_port = data.split('CLIENT: ')
+            print("received address data: " + data)
+            self.connected_address, connected_port_str = data.split('CLIENT: ')[1].split(":")
+            self.connected_port = int(connected_port_str)
             self.prompt = '[' + '@'.join((self.nickname, self.connected_address)) + ']> '
         except socket.error:
             print(f'Failed to connect to chat server @ port {self.server_port}')
