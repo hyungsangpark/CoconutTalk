@@ -35,12 +35,10 @@ class ChatServer:
 
     def get_client_name(self, client):
         """ Return the name of the client """
-        info = self.client_map[client]
-        host, name = info[0][0], info[1]
-        return '@'.join((name, host))
+        return self.client_map[client][1]
 
     def get_client_socket(self, port_num: int) -> socket.socket:
-        f"""
+        """
         Given a port number of a client, it returns the socket instance of the client.
 
         :param port_num: Port of the client socket to find.
@@ -125,7 +123,8 @@ class ChatServer:
 
                         elif data:
                             # Send as new client's message...
-                            msg = f'\n#[{self.get_client_name(sock)}]>> {data}'
+                            # msg = f'{self.get_client_name(sock)}:{data}'
+                            msg = format_message(self.get_client_name(sock), data)
 
                             # Send data to all except ourself
                             for output in self.outputs:

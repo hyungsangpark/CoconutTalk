@@ -14,9 +14,11 @@ class ConnectionWidget(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.nickname_line_edit = QLineEdit()
-        self.port_line_edit = QLineEdit()
         self.ip_address_line_edit = QLineEdit()
+        self.ip_address_line_edit.setPlaceholderText("localhost")
+        self.port_line_edit = QLineEdit()
+        self.port_line_edit.setPlaceholderText("9988")
+        self.nickname_line_edit = QLineEdit()
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -58,6 +60,7 @@ class ConnectionWidget(QWidget):
 
         connect_button = QPushButton("Connect", self)
         connect_button.clicked.connect(self.connect)
+        connect_button.setAutoDefault(True)
         buttons_h_box.addWidget(connect_button)
 
         cancel_button = QPushButton("Cancel", self)
@@ -77,9 +80,15 @@ class ConnectionWidget(QWidget):
         Connects the client to the server with the given input field values.
         This is a Connect button on-click handler.
         """
-        ip_address = self.ip_address_line_edit.text()
-        port: int = int(self.port_line_edit.text())
+        ip_address = "localhost" if self.ip_address_line_edit.text() == "" else self.ip_address_line_edit.text()
+        port: int = int(9988 if self.port_line_edit.text() == "" else self.port_line_edit.text())
         nickname = self.nickname_line_edit.text()
+
+        if nickname == "":
+            notify_non_empty_nickname = QMessageBox()
+            notify_non_empty_nickname.setText("Please enter a non-empty nickname")
+            notify_non_empty_nickname.exec()
+            return
 
         print(f"IP Address: {ip_address}")
         print(f"Port: {port}")

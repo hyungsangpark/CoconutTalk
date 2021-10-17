@@ -4,6 +4,8 @@ import struct
 
 # Custom type used to denote client, format is as follows:
 # ((ip_addresss, port), name, connected_time)
+import time
+
 Client = tuple[tuple[str, int], str, float]
 SERVER_HOST = "localhost"
 
@@ -60,3 +62,6 @@ def receive_clients(channel):
         buf = channel.recv(size - len(buf))
     return pickle.loads(buf)
 
+
+def format_message(nickname: str, message: str) -> str:
+    return f'{nickname} ({time.strftime("%H:%M", time.localtime())}): {message}'

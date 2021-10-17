@@ -56,39 +56,56 @@ class ChatClient:
         """
         self.sock.close()
 
-    def run(self):
-        """
-        Chat client main loop
-        :return:
-        """
-        while self.connected:
-            try:
-                sys.stdout.write(self.prompt)
-                sys.stdout.flush()
+    def fetch_messages(self) -> list[str]:
+        messages: list[str] = []
 
-                # Wait for input from stdin and socket
-                readable, writeable, exceptional = select.select(
-                    [0, self.sock], [], [])
+        # Wait for input from stdin and socket
+        readable, writeable, exceptional = select.select([self.sock], [], [])
 
-                for sock in readable:
-                    if sock == 0:
-                        data = sys.stdin.readline().strip()
-                        if data == "GET_ALL_CLIENTS":
-                            send(self.sock, data)
-                            print(f"{self.prompt}{receive_clients(self.sock)}")
-                        elif data:
-                            send(self.sock, data)
-                    elif sock == self.sock:
-                        data = receive(self.sock)
-                        if not data:
-                            print('Client shutting down.')
-                            self.connected = False
-                            break
-                        else:
-                            sys.stdout.write(data + '\n')
-                            sys.stdout.flush()
+        for sock in readable:
+            data = receive(sock)
+            if not data:
+                client_port, _, message = data.partition(":")
+                print(f'Client: {client_port} shutting down.')
+                messages.append(f'SHUTDOWN:{client_port}')
+            else:
+                messages.append(data)
 
-            except KeyboardInterrupt:
-                print(" Client interrupted. """)
-                self.cleanup()
-                break
+        return messages
+
+    # def run(self):
+    #     """
+    #     Chat client main loop
+    #     :return:
+    #     """
+    #     while self.connected:
+    #         try:
+    #             sys.stdout.write(self.prompt)
+    #             sys.stdout.flush()
+    #
+    #             # Wait for input from stdin and socket
+    #             readable, writeable, exceptional = select.select(
+    #                 [0, self.sock], [], [])
+    #
+    #             for sock in readable:
+    #                 if sock == 0:
+    #                     data = sys.stdin.readline().strip()
+    #                     if data == "GET_ALL_CLIENTS":
+    #                         send(self.sock, data)
+    #                         print(f"{self.prompt}{receive_clients(self.sock)}")
+    #                     elif data:
+    #                         send(self.sock, data)
+    #                 elif sock == self.sock:
+    #                     data = receive(self.sock)
+    #                     if not data:
+    #                         print('Client shutting down.')
+    #                         self.connected = False
+    #                         break
+    #                     else:
+    #                         sys.stdout.write(data + '\n')
+    #                         sys.stdout.flush()
+    #
+    #         except KeyboardInterrupt:
+    #             print(" Client interrupted. """)
+    #             self.cleanup()
+    #             break

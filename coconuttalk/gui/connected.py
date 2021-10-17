@@ -89,7 +89,8 @@ class ConnectedWidget(QWidget):
         chat_rooms_buttons.addWidget(join_chat_room_button)
 
         close_button = QPushButton("Close", self)
-        close_button.clicked.connect(QCoreApplication.instance().quit)
+        # close_button.clicked.connect(QCoreApplication.instance().quit)
+        close_button.clicked.connect(self.close_program)
         main_layout.addWidget(close_button)
 
         main_layout.addWidget(QLabel(f"IP Address: {self.client.server_address}"))
@@ -134,3 +135,7 @@ class ConnectedWidget(QWidget):
                                                    "Chat room with the given name already exists.\n" +
                                                    "Enter a new chat room name:")
             self.chat_rooms.addItem(QListWidgetItem(text))
+
+    def close_program(self) -> None:
+        # self.client.cleanup()
+        QCoreApplication.instance().quit()
