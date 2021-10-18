@@ -61,7 +61,7 @@ class FetchClients(QThread):
             clients: list[tuple[str, tuple[str, int]]] = []
 
             # Retrieve a list of clients currently connected and list them in the list of clients.
-            connected_clients = list(self.client.get_all_clients())
+            connected_clients = self.client.get_all_clients()
             print(f"connected_clients: {connected_clients}")
 
             # Format each client information into client information form used for clients list.

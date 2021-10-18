@@ -20,6 +20,7 @@ class OneToOneChatWidget(QDialog):
         self.other_client_nickname = other_client_nickname
         self.other_client_port = other_client_port
         self.client = client
+        self.room_name = f"{self.client.connected_port}_to_{self.other_client_port}"
 
         self.chats = QTextBrowser()
         self.chats_input = QLineEdit()
@@ -62,8 +63,8 @@ class OneToOneChatWidget(QDialog):
         Removes the chat in the server, then closes the chat.
         """
         self.fetch_message_thread.stop()
-        self.client.leave_room(f"{self.client.connected_port}_to_{self.other_client_port}")
-        # send(self.client.sock, f"CLOSEROOM:{self.client.connected_port}_to_{self.other_client_port}")
+        # send("i'm leaving")
+        self.client.leave_room(self.room_name)
         self.accept()
 
     def send(self) -> None:
@@ -78,6 +79,7 @@ class OneToOneChatWidget(QDialog):
         # Only send message if it's not empty.
         if message:
             # Convention: ("MESSAGE", "Hello, world!")
-            send(self.client.sock, "MESSAGE", message)
+            self.client.send_message(self.room_name, message)
+            # send(self.client.sock, "MESSAGE", message)
             current_time = time.strftime("%H:%M", time.localtime())
             self.chats.append(f"Me ({current_time}): {message}")

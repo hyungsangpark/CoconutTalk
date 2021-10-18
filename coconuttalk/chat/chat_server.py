@@ -73,15 +73,9 @@ class ChatServer:
                     self.clients += 1
                     print(address)
                     send(client, "CLIENT", address)
-                    # send(client, f'CLIENT: {str(address[0])}:{str(address[1])}')
                     inputs.append(client)
 
                     self.client_map[client] = (address, cname, time.time())
-                    # Send joining information to other clients
-                    # msg = f'\n(Connected: New client ({self.clients}) from {self.get_client_name(client)})'
-                    # for output in self.outputs:
-                    #     send(sock, "CLIENTLIST", *self.client_map.values())
-                        # send(output, msg)
                     self.outputs.append(client)
 
                 elif sock == sys.stdin:
@@ -100,21 +94,16 @@ class ChatServer:
 
                         if data == ():
                             print(f'Chat server: {sock.fileno()} hung up')
-                            self.clients -= 1
+
                             sock.close()
                             inputs.remove(sock)
+
                             self.outputs.remove(sock)
-
-                            # Sending client leaving information to others
-                            # msg = f'\n(Now hung up: Client from {self.get_client_name(sock)})\n'
                             self.client_map.pop(sock)
-
-                            # this change will soon be detected by clients. No need to manually update again.
-                            # for output in self.outputs:
-                            #     send(output, msg)
+                            self.clients -= 1
 
                         elif data[0] == "GET_ALL_CLIENTS":
-                            send(sock, *self.client_map.values())
+                            send(sock, "CLIENTS", list(self.client_map.values()))
 
                         # Convention: ("CREATEROOM", "room_name_hehe_xd", 13531)
                         elif data[0] == "CREATEROOM":
@@ -151,27 +140,36 @@ class ChatServer:
                         elif data[0] == "EXITROOM":
                             # Change this.
                             _, room_name = data
+                            message = f"<< Client {self.get_client_name(sock)} has left the chat. >>"
 
                             try:
                                 self.rooms[room_name].remove(sock)
-                                if not self.rooms[room_name]:
+                                print("sockets in room:", self.rooms[room_name])
+                                if self.rooms[room_name]:
+                                    for other_sock in self.rooms[room_name]:
+                                        send(other_sock, message)
+                                else:
+                                    # If no one's left in the chat room, remove the room.
                                     self.rooms.pop(room_name)
+                                    print(f"Room: {room_name} has been deleted.")
+
                             except KeyError:
                                 print(f"Room: {room_name} does not exist.")
 
-                            send(sock, "EXITROOM")
-                            print(f"Room: {room_name} has been deleted.")
+                            # A confirmation message. This closes fetch message thread waiting for incoming message.
+                            send(sock, "EXITROOM_OK")
 
-                        # Convention: ("MESSAGE", "Hello, World!")
+                        # Convention: ("MESSAGE", "room1", "Hello, World!")
                         elif data[0] == "MESSAGE":
                             # Send as new client's message...
                             # msg = f'{self.get_client_name(sock)}:{data}'
-                            msg = format_message(self.get_client_name(sock), data[1])
+                            _, room_name, message = data
+                            formatted_message = format_message(self.get_client_name(sock), message)
 
                             # Send data to all except ourself
                             for output in self.outputs:
                                 if output != sock:
-                                    send(output, msg)
+                                    send(output, formatted_message)
 
                         else:
                             print("Not sure what happened; Something strange happened in chat_server.py?")

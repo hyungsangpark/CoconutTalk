@@ -50,7 +50,8 @@ class ChatClient:
         :return: A tuple with list of client information
         """
         send(self.sock, "GET_ALL_CLIENTS")
-        return receive(self.sock)
+        # description, clients = receive(self.sock)
+        return receive(self.sock)[1]
 
     def cleanup(self):
         """
@@ -71,10 +72,13 @@ class ChatClient:
         for sock in readable:
             data = receive(sock)[0]
             print(data)
-            if data == "EXITROOM":
+            if data == "EXITROOM_OK":
                 # last message from the server.
                 print("Room left.")
             else:
                 messages.append(data)
 
         return messages
+
+    def send_message(self, room_name: str, message: str) -> None:
+        send(self.sock, "MESSAGE", room_name, message)
