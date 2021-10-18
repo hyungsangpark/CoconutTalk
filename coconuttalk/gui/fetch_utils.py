@@ -1,6 +1,6 @@
 import time
 
-from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QEventLoop
+from PyQt5.QtCore import QThread, pyqtSignal
 
 from coconuttalk.chat.chat_client import ChatClient
 
@@ -64,21 +64,14 @@ class FetchClients(QThread):
             connected_clients = list(self.client.get_all_clients())
             print(f"connected_clients: {connected_clients}")
 
-            # Remove myself to add a custom one.
-            # myself = next(lambda client: client, connected_clients)
-            connected_clients = list(filter(lambda client: client[0][1] != self.client.connected_port, connected_clients))
-
+            # Format each client information into client information form used for clients list.
             current_time = time.time()
-            connected_clients.append((
-                (self.client.connected_address, self.client.connected_port),
-                f"{self.client.nickname} [me]",
-                current_time))
-
             for client in connected_clients:
                 seconds_elapsed = current_time - client[2]
                 hours, rest = divmod(seconds_elapsed, 3600)
                 minutes, seconds = divmod(rest, 60)
 
+                # Add appropriate time elapsed label.
                 if hours > 0:
                     time_passed = f"{int(hours)} hour ago"
                 elif minutes > 0:
@@ -88,13 +81,20 @@ class FetchClients(QThread):
                 else:
                     time_passed = "now"
 
-                # Convention: ("Alice (12 min ago)", "Alice", 12593)
-                clients.append((f"{client[1]} ({time_passed})", (client[1], client[0][1])))
+                # Possibly add [me] label if it's the person.
+                me_notifier = " [me]" if client[0][1] == self.client.connected_port else ""
 
+                # Convention: ("Alice (12 min ago)", "Alice", 12593)
+                clients.append((f"{client[1]}{me_notifier} ({time_passed})", (client[1], client[0][1])))
+
+            # Emit clients fetched
             self.clients_fetched.emit(clients)
 
             # To put a fetching interval.
             time.sleep(1)
 
     def stop(self):
+        """
+        Stop the thread.
+        """
         self.thread_alive = False

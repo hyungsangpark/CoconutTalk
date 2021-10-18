@@ -1,5 +1,3 @@
-import time
-
 from PyQt5.QtCore import Qt, QCoreApplication, pyqtSlot
 from PyQt5.QtWidgets import QWidget, QListWidget, QVBoxLayout, QLabel, QHBoxLayout, QListWidgetItem, QPushButton, \
     QInputDialog, QMessageBox
@@ -36,43 +34,6 @@ class ConnectedWidget(QWidget):
         connected_clients_layout = QHBoxLayout()
         main_layout.addLayout(connected_clients_layout)
 
-        # Components inside connected_clients_layout
-        # self.connected_clients.addItem(QListWidgetItem(f"{self.client.name} [me] (now)"))
-
-        # # Retrieve a list of clients currently connected and list them in the list of clients.
-        # clients = list(self.client.get_all_clients())
-        # print(clients)
-        # # myself = next(client for client in clients if client[1] == self.client.nickname)
-        # # self.port = myself[0][1]
-        # clients.remove(next(client for client in clients if client[1] == self.client.nickname))
-        # # clients = list(filter(lambda c: c[1] != self.client.name, clients))
-        # current_time = time.time()
-        # clients.append((
-        #     (self.client.connected_address, self.client.connected_port),
-        #     f"{self.client.nickname} [me]",
-        #     current_time))
-        #
-        # for client in clients:
-        #     seconds_elapsed = current_time - client[2]
-        #     hours, rest = divmod(seconds_elapsed, 3600)
-        #     mins, secs = divmod(rest, 60)
-        #     if hours > 0:
-        #         time_passed = f"{int(hours)} hour ago"
-        #     elif mins > 0:
-        #         time_passed = f"{int(mins)} min ago"
-        #     elif secs == 0:
-        #         time_passed = "now"
-        #     else:
-        #         time_passed = f"{int(secs)} sec ago"
-        #
-        #     # Convention: "Alice (36 min ago)"
-        #     client_list_widget_item = QListWidgetItem(f"{client[1]} ({time_passed})")
-        #     # Convention: ("client_name", 13531)
-        #     client_list_widget_item.setData(Qt.UserRole, (client[1], client[0][1]))
-        #     self.connected_clients.addItem(client_list_widget_item)
-        #
-        # self.connected_clients.clear()
-
         connected_clients_layout.addWidget(self.connected_clients)
         chat_button = QPushButton("1:1 Chat", self)
         connected_clients_layout.addWidget(chat_button)
@@ -97,13 +58,8 @@ class ConnectedWidget(QWidget):
         chat_rooms_buttons.addWidget(join_chat_room_button)
 
         close_button = QPushButton("Close", self)
-        # close_button.clicked.connect(QCoreApplication.instance().quit)
         close_button.clicked.connect(self.close_program)
         main_layout.addWidget(close_button)
-
-        main_layout.addWidget(QLabel(f"IP Address: {self.client.server_address}"))
-        main_layout.addWidget(QLabel(f"Port: {self.client.server_port}"))
-        main_layout.addWidget(QLabel(f"Nickname: {self.client.nickname}"))
 
         self.setWindowTitle("CoconutTalk")
         self.setGeometry(300, 300, 300, 200)
@@ -135,8 +91,6 @@ class ConnectedWidget(QWidget):
                 self.connected_clients.takeItem(i - removed_elements)
 
     def one_to_one_chat(self) -> None:
-        # self.fetch.pause()
-        # self.fetch.
         self.fetch.stop()
         self.fetch.wait()
 
@@ -147,7 +101,6 @@ class ConnectedWidget(QWidget):
             return
 
         client_to_chat_nickname, client_to_chat_port = self.connected_clients.currentItem().data(Qt.UserRole)
-        # client_to_chat_nickname = self.connected_clients.currentItem().text().rpartition(' (')[0]
         print("address: " + client_to_chat_nickname)
         print("port: " + str(client_to_chat_port))
 
@@ -176,12 +129,13 @@ class ConnectedWidget(QWidget):
                                                     parent=self)
         one_to_one_chat_dialog.exec()
 
-        # Now that chat has finished, refetch the client list.
-        # self.fetch = FetchClients(client=self.client)
-        # self.fetch.clients_fetched.connect(self.fill_clients)
+        # Now that chat has finished, restart live-fetching the client list.
         self.fetch.start()
 
     def create_chatroom(self) -> None:
+        """
+        Creates a chat room that the client can join.
+        """
         text, ok = QInputDialog.getText(self, 'Create Chat Room', "Enter new chat room name:")
         if ok:
             created_room = False
