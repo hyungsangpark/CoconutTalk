@@ -1,5 +1,4 @@
 import select
-import sys
 
 from coconuttalk.chat.utils import *
 
@@ -28,15 +27,19 @@ class ChatClient:
             print(f'Now connected to chat server@ port {self.server_port}')
             self.connected = True
 
-            # Send my name...
-            send(self.sock, 'NAME: ' + self.nickname)
-            data = receive(self.sock)
+            # Send my name.
+            # Convention: ("NAME", "hyung")
+            send(self.sock, "NAME", self.nickname)
+
+            # Receive client address.
+            # Convention: ("CLIENT", ('127.0.0.1', 15151))
+            self.connected_address, self.connected_port = receive(self.sock)[1]
 
             # Contains client address, set it
-            print("received address data: " + data)
-            self.connected_address, connected_port_str = data.split('CLIENT: ')[1].split(":")
-            self.connected_port = int(connected_port_str)
-            self.prompt = '[' + '@'.join((self.nickname, self.connected_address)) + ']> '
+            # print("received address data: " + data)
+            # self.connected_address, connected_port_str = data.split('CLIENT: ')[1].split(":")
+            # self.connected_port = int(connected_port_str)
+            # self.prompt = '[' + '@'.join((self.nickname, self.connected_address)) + ']> '
         except socket.error:
             print(f'Failed to connect to chat server @ port {self.server_port}')
             raise socket.error
@@ -47,7 +50,7 @@ class ChatClient:
         :return: A tuple with list of client information
         """
         send(self.sock, "GET_ALL_CLIENTS")
-        return receive_clients(self.sock)
+        return receive(self.sock)
 
     def cleanup(self):
         """
@@ -56,6 +59,9 @@ class ChatClient:
         """
         self.sock.close()
 
+    def leave_room(self, room_name: str) -> None:
+        send(self.sock, "EXITROOM", room_name)
+
     def fetch_messages(self) -> list[str]:
         messages: list[str] = []
 
@@ -63,49 +69,12 @@ class ChatClient:
         readable, writeable, exceptional = select.select([self.sock], [], [])
 
         for sock in readable:
-            data = receive(sock)
-            if not data:
-                client_port, _, message = data.partition(":")
-                print(f'Client: {client_port} shutting down.')
-                messages.append(f'SHUTDOWN:{client_port}')
+            data = receive(sock)[0]
+            print(data)
+            if data == "EXITROOM":
+                # last message from the server.
+                print("Room left.")
             else:
                 messages.append(data)
 
         return messages
-
-    # def run(self):
-    #     """
-    #     Chat client main loop
-    #     :return:
-    #     """
-    #     while self.connected:
-    #         try:
-    #             sys.stdout.write(self.prompt)
-    #             sys.stdout.flush()
-    #
-    #             # Wait for input from stdin and socket
-    #             readable, writeable, exceptional = select.select(
-    #                 [0, self.sock], [], [])
-    #
-    #             for sock in readable:
-    #                 if sock == 0:
-    #                     data = sys.stdin.readline().strip()
-    #                     if data == "GET_ALL_CLIENTS":
-    #                         send(self.sock, data)
-    #                         print(f"{self.prompt}{receive_clients(self.sock)}")
-    #                     elif data:
-    #                         send(self.sock, data)
-    #                 elif sock == self.sock:
-    #                     data = receive(self.sock)
-    #                     if not data:
-    #                         print('Client shutting down.')
-    #                         self.connected = False
-    #                         break
-    #                     else:
-    #                         sys.stdout.write(data + '\n')
-    #                         sys.stdout.flush()
-    #
-    #         except KeyboardInterrupt:
-    #             print(" Client interrupted. """)
-    #             self.cleanup()
-    #             break
