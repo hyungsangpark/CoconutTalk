@@ -1,5 +1,6 @@
 import select
 import signal
+import ssl
 import sys
 import time
 
@@ -14,10 +15,17 @@ class ChatServer:
         self.client_map: dict[socket.socket, Client] = {}
         self.rooms: dict[str, list[socket.socket]] = {}
         self.outputs = []  # list output sockets
+
+        self.context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        self.context.load_cert_chain(certfile="cert.pem", keyfile="cert.pem")
+        self.context.load_verify_locations('cert.pem')
+        self.context.set_ciphers('AES128-SHA')
+
         self.server_socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((SERVER_HOST, port))
         self.server_socket.listen(backlog)
+        self.server_socket = self.context.wrap_socket(self.server_socket, server_side=True)
         # Catch keyboard interrupts
         signal.signal(signal.SIGINT, self.sighandler)
 

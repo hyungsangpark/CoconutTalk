@@ -1,4 +1,5 @@
 import select
+import ssl
 
 from coconuttalk.chat.utils import *
 
@@ -17,12 +18,16 @@ class ChatClient:
         self.connected_address: str = ""
         self.connected_port: int = -1
 
+        # Create SSL Context for Chat Client.
+        self.context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+
         # Initial prompt
         self.prompt = f'[{nickname}@{socket.gethostname()}]> '
 
         # Connect to server at port
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock = self.context.wrap_socket(self.sock, server_hostname=host)
             self.sock.connect((host, self.server_port))
             print(f'Now connected to chat server@ port {self.server_port}')
             self.connected = True
