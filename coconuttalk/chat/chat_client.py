@@ -37,8 +37,9 @@ class ChatClient:
             send(self.sock, "NAME", self.nickname)
 
             # Receive client address.
-            # Convention: ("CLIENT", ('127.0.0.1', 15151))
-            self.connected_address, self.connected_port = receive(self.sock)[1]
+            # Convention: ("CLIENT", (('127.0.0.1', 15151), "hyung", 12532.2390523))
+            self.client_object_from_server = receive(self.sock)[1]
+            self.connected_address, self.connected_port = self.client_object_from_server[0]
 
             # Contains client address, set it
             # print("received address data: " + data)
@@ -49,14 +50,23 @@ class ChatClient:
             print(f'Failed to connect to chat server @ port {self.server_port}')
             raise socket.error
 
-    def get_all_clients(self) -> list[Client]:
+    def get_server_update(self) -> tuple[list[Client], list[str, Client]]:
         """
         Retrieves list of clients currently connected to the server.
         :return: A tuple with list of client information
         """
-        send(self.sock, "GET_ALL_CLIENTS")
-        # description, clients = receive(self.sock)
-        return receive(self.sock)[1]
+        client_description: str = ""
+        clients: list[Client] = []
+        rooms_description: str = ""
+        group_chat_rooms: list[str, Client] = []
+        while client_description != "CLIENTS" or rooms_description != "ROOMS":
+            send(self.sock, "GET_UPDATES")
+            try:
+                client_description, clients, rooms_description, group_chat_rooms = receive(self.sock)
+            except ValueError:
+                print("Something unexpected received while receiving server updates. Please try again.")
+                continue
+        return clients, group_chat_rooms
 
     def cleanup(self):
         """
@@ -65,8 +75,26 @@ class ChatClient:
         """
         self.sock.close()
 
-    def leave_room(self, room_name: str) -> None:
-        send(self.sock, "EXITROOM", room_name)
+    def leave_one_to_one(self) -> None:
+        send(self.sock, "END_ONE_TO_ONE")
+
+    def join_room(self, room_info: tuple[str, Client]) -> None:
+        try_counter = 0
+        while try_counter < 5:
+            print(f"Try {try_counter} of joining ROOM: {room_info[0]} by {room_info[1][1]}")
+            send(self.sock, "JOINROOM", room_info)
+            result, = receive(self.sock)
+            print(f"RESULT(try {try_counter}): {result}")
+
+            if result == "SUCCESS":
+                break
+            else:
+                try_counter += 1
+
+        print(f"JOIN SUCCESS AFTER {try_counter} TRY" if try_counter < 5 else "JOIN FAILED AFTER 5 TRIES")
+
+    def leave_room(self, room_info: tuple[str, Client]) -> None:
+        send(self.sock, "EXITROOM", room_info)
 
     def fetch_messages(self) -> list[str]:
         messages: list[str] = []
@@ -85,5 +113,5 @@ class ChatClient:
 
         return messages
 
-    def send_message(self, room_name: str, message: str) -> None:
-        send(self.sock, "MESSAGE", room_name, message)
+    def send_message(self, room_info: tuple[str, Client], message: str) -> None:
+        send(self.sock, "MESSAGE", room_info, message)

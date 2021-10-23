@@ -2,11 +2,10 @@ import time
 from PyQt5.QtWidgets import QDialog, QTextBrowser, QVBoxLayout, QLabel, QHBoxLayout, QLineEdit, QPushButton
 
 from coconuttalk.chat.chat_client import ChatClient
-from coconuttalk.chat.utils import send
 from coconuttalk.gui.fetch_utils import FetchMessage
 
 
-class OneToOneChatWidget(QDialog):
+class OneToOneChatDialog(QDialog):
     """
     This is a 1:1 chat window which allows users to chat with a single person.
     """
@@ -64,7 +63,8 @@ class OneToOneChatWidget(QDialog):
         """
         self.fetch_message_thread.stop()
         # send("i'm leaving")
-        self.client.leave_room(self.room_name)
+        self.client.leave_one_to_one()
+        # self.client.leave_room(self.room_name)
         self.accept()
 
     def send(self) -> None:

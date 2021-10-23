@@ -4,8 +4,9 @@ from PyQt5.QtWidgets import QWidget, QListWidget, QVBoxLayout, QLabel, QHBoxLayo
 
 from coconuttalk.chat.chat_client import ChatClient
 from coconuttalk.chat.utils import *
-from coconuttalk.gui.fetch_utils import FetchClients
-from coconuttalk.gui.one_to_one_chat import OneToOneChatWidget
+from coconuttalk.gui.fetch_utils import FetchServerUpdates
+from coconuttalk.gui.group_chat import GroupChatDialog
+from coconuttalk.gui.one_to_one_chat import OneToOneChatDialog
 
 
 class ConnectedWidget(QWidget):
@@ -21,8 +22,8 @@ class ConnectedWidget(QWidget):
 
         self.init_ui()
 
-        self.fetch = FetchClients(client=self.client, parent=self)
-        self.fetch.clients_fetched.connect(self.fill_clients)
+        self.fetch = FetchServerUpdates(client=self.client, parent=self)
+        self.fetch.updates_fetched.connect(self.apply_server_updates)
         self.fetch.start()
 
     def init_ui(self) -> None:
@@ -54,7 +55,9 @@ class ConnectedWidget(QWidget):
         create_chat_room_button = QPushButton("Create", self)
         create_chat_room_button.clicked.connect(self.create_chatroom)
         chat_rooms_buttons.addWidget(create_chat_room_button)
+
         join_chat_room_button = QPushButton("Join", self)
+        join_chat_room_button.clicked.connect(self.join_room)
         chat_rooms_buttons.addWidget(join_chat_room_button)
 
         close_button = QPushButton("Close", self)
@@ -66,17 +69,23 @@ class ConnectedWidget(QWidget):
         self.show()
 
     @pyqtSlot(object)
-    def fill_clients(self, clients: list[tuple[str, tuple[str, int]]]) -> None:
-        print(f"clients to add: {clients}")
+    def apply_server_updates(self, updates: tuple[ list[tuple[str, tuple[str, int]]], list[tuple[str, Client]] ]) -> None:
+        clients, group_chat_rooms = updates
+
+        # print(f"clients to add: {clients}")
+
+        # Start applying currently connected clients.
 
         connected_clients_ports: list[int] = [self.connected_clients.item(i).data(Qt.UserRole)[1] for i in
                                               range(self.connected_clients.count())]
 
-        print(f"conneected_clients_port: {connected_clients_ports}")
+        # print(f"conneected_clients_port: {connected_clients_ports}")
 
         for client in clients:
             if client[1][1] in connected_clients_ports:
+                # Retrieve current index of the client in the QListWidget.
                 client_index = connected_clients_ports.index(client[1][1])
+                # Set text to the current client in the QListWidget.
                 self.connected_clients.item(client_index).setText(client[0])
                 connected_clients_ports[client_index] = -1
             else:
@@ -85,10 +94,35 @@ class ConnectedWidget(QWidget):
                 new_client_list_widget_item.setData(Qt.UserRole, client[1])
                 self.connected_clients.addItem(new_client_list_widget_item)
 
+        # print(f"connected_clients_ports after update: {connected_clients_ports}")
         removed_elements = 0
         for i, port in enumerate(connected_clients_ports):
+            # print(f"current port: {port}")
             if port != -1:
                 self.connected_clients.takeItem(i - removed_elements)
+                removed_elements += 1
+
+        # Start applying current list of group chats.
+
+        already_present_group_chats: list[tuple[str, Client]] = [self.chat_rooms.item(i).data(Qt.UserRole) for i in range(self.chat_rooms.count())]
+        # print(f"already present chats: {already_present_group_chats}")
+        # updated_group_chats: list[str, Client] = [room for room in group_chat_rooms]
+
+        rooms_to_add = list(set(group_chat_rooms) - set(already_present_group_chats))
+        rooms_to_remove = list(set(already_present_group_chats) - set(group_chat_rooms))
+
+        # print(f"rooms_to_add: {rooms_to_add}")
+        # print(f"rooms_to_remove: {rooms_to_remove}")
+
+        for room in rooms_to_add:
+            new_room_to_add = QListWidgetItem(f"{room[0]} by {room[1][1]}")
+            new_room_to_add.setData(Qt.UserRole, room)
+            self.chat_rooms.addItem(new_room_to_add)
+
+        # removed_elements = 0
+        for removed_rooms, room in enumerate(rooms_to_remove):
+            room_index = already_present_group_chats.index(room)
+            self.chat_rooms.takeItem(room_index - removed_rooms)
 
     def one_to_one_chat(self) -> None:
         self.fetch.stop()
@@ -108,9 +142,9 @@ class ConnectedWidget(QWidget):
         created_room = False
         while not created_room:
             if result == "":
-                send(self.client.sock, "CREATEROOM", f"{self.client.connected_port}_to_{client_to_chat_port}",
-                     client_to_chat_port)
+                send(self.client.sock, "CONNECT_ONE_TO_ONE", client_to_chat_port)
                 result = receive(self.client.sock)[0]
+
             if result == "SUCCESS":
                 created_room = True
             elif result == "EXISTS":
@@ -123,7 +157,7 @@ class ConnectedWidget(QWidget):
                 return
 
         # Link to 1:1 chat and close connected screen.
-        one_to_one_chat_dialog = OneToOneChatWidget(other_client_nickname=client_to_chat_nickname,
+        one_to_one_chat_dialog = OneToOneChatDialog(other_client_nickname=client_to_chat_nickname,
                                                     other_client_port=client_to_chat_port,
                                                     client=self.client,
                                                     parent=self)
@@ -136,22 +170,54 @@ class ConnectedWidget(QWidget):
         """
         Creates a chat room that the client can join.
         """
-        text, ok = QInputDialog.getText(self, 'Create Chat Room', "Enter new chat room name:")
+        room_name, ok = QInputDialog.getText(self, 'Create Chat Room', "Enter new chat room name:")
         if ok:
             created_room = False
             while not created_room:
-                send(self.client.sock, "CREATEROOM", text, -1)
+                send(self.client.sock, "CREATEROOM", room_name, self.client.client_object_from_server)
                 result = receive(self.client.sock)[0]
                 if result == "SUCCESS":
                     created_room = True
                 else:
-                    text, _ = QInputDialog.getText(self,
-                                                   "Create Chat Room",
-                                                   "Chat room with the given name already exists.\n" +
-                                                   "Enter a new chat room name:")
-            self.chat_rooms.addItem(QListWidgetItem(text))
+                    room_name, continue_room_creation = QInputDialog.getText(self,
+                                                        "Create Chat Room",
+                                                        "Chat room with the given name already exists.\n" +
+                                                        "Enter a new chat room name:")
+                    if not continue_room_creation:
+                        return
+
+            new_chat_room_item = QListWidgetItem(f"{room_name} by {self.client.nickname}")
+            # client: Client = ((self.client.connected_address, self.client.connected_port), self.client.nickname, 0.0)
+            new_chat_room_item.setData(Qt.UserRole, (room_name, self.client.client_object_from_server))
+            self.chat_rooms.addItem(new_chat_room_item)
+
+    def join_room(self) -> None:
+        self.fetch.stop()
+        self.fetch.wait()
+
+        if self.chat_rooms.currentItem() is None:
+            notify_unselected_chat_room = QMessageBox()
+            notify_unselected_chat_room.setText("Please select a room to join.")
+            notify_unselected_chat_room.exec()
+            return
+
+        chat_room_info = self.chat_rooms.currentItem().data(Qt.UserRole)
+        print(f"chat room name: {chat_room_info[0]}")
+        print(f"chat room host: {chat_room_info[1]}")
+
+        self.client.join_room(chat_room_info)
+
+        # Link to 1:1 chat and close connected screen.
+        one_to_one_chat_dialog = GroupChatDialog(client=self.client,
+                                                 room_info=chat_room_info,
+                                                 parent=self)
+        one_to_one_chat_dialog.exec()
+
+        # Now that chat has finished, restart live-fetching the client list.
+        self.fetch.start()
 
     def close_program(self) -> None:
         # self.client.cleanup()
         self.fetch.stop()
+        self.fetch.wait()
         QCoreApplication.instance().quit()
