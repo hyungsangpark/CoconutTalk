@@ -74,7 +74,7 @@ class OneToOneChatDialog(QDialog):
         # Retrieve message and clear chat input.
         message: str = self.chats_input.text()
         self.chats_input.clear()
-        print("Message sent: " + message)
+        # print("Message sent: " + message)
 
         # Only send message if it's not empty.
         if message:

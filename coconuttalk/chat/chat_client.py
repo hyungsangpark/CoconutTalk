@@ -29,7 +29,7 @@ class ChatClient:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock = self.context.wrap_socket(self.sock, server_hostname=host)
             self.sock.connect((host, self.server_port))
-            print(f'Now connected to chat server@ port {self.server_port}')
+            # print(f'Now connected to chat server@ port {self.server_port}')
             self.connected = True
 
             # Send my name.
@@ -81,17 +81,17 @@ class ChatClient:
     def join_room(self, room_info: tuple[str, Client]) -> None:
         try_counter = 0
         while try_counter < 5:
-            print(f"Try {try_counter} of joining ROOM: {room_info[0]} by {room_info[1][1]}")
+            # print(f"Try {try_counter} of joining ROOM: {room_info[0]} by {room_info[1][1]}")
             send(self.sock, "JOINROOM", room_info)
             result, = receive(self.sock)
-            print(f"RESULT(try {try_counter}): {result}")
+            # print(f"RESULT(try {try_counter}): {result}")
 
             if result == "SUCCESS":
                 break
             else:
                 try_counter += 1
 
-        print(f"JOIN SUCCESS AFTER {try_counter} TRY" if try_counter < 5 else "JOIN FAILED AFTER 5 TRIES")
+        # print(f"JOIN SUCCESS AFTER {try_counter} TRY" if try_counter < 5 else "JOIN FAILED AFTER 5 TRIES")
 
     def leave_room(self, room_info: tuple[str, Client]) -> None:
         send(self.sock, "EXITROOM", room_info)
@@ -104,11 +104,8 @@ class ChatClient:
 
         for sock in readable:
             data = receive(sock)[0]
-            print(data)
-            if data == "EXITROOM_OK":
-                # last message from the server.
-                print("Room left.")
-            else:
+            # print(data)
+            if data != "EXITROOM_OK":
                 messages.append(data)
 
         return messages
@@ -119,5 +116,5 @@ class ChatClient:
     def fetch_clients_in_room(self, room_info: tuple[str, Client]) -> list[Client]:
         send(self.sock, "CLIENTS_IN_ROOM", room_info)
         result, clients_in_room = receive(self.sock)
-        print(f"clients_in_room: {clients_in_room}")
+        # print(f"clients_in_room: {clients_in_room}")
         return clients_in_room

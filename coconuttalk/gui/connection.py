@@ -90,9 +90,9 @@ class ConnectionWidget(QWidget):
             notify_non_empty_nickname.exec()
             return
 
-        print(f"IP Address: {ip_address}")
-        print(f"Port: {port}")
-        print(f"Nickname: {nickname}")
+        # print(f"IP Address: {ip_address}")
+        # print(f"Port: {port}")
+        # print(f"Nickname: {nickname}")
 
         try:
             client = ChatClient(nickname=nickname, host=ip_address, port=port)

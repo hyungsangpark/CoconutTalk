@@ -135,8 +135,8 @@ class ConnectedWidget(QWidget):
             return
 
         client_to_chat_nickname, client_to_chat_port = self.connected_clients.currentItem().data(Qt.UserRole)
-        print("address: " + client_to_chat_nickname)
-        print("port: " + str(client_to_chat_port))
+        # print("address: " + client_to_chat_nickname)
+        # print("port: " + str(client_to_chat_port))
 
         result = ""
         created_room = False
@@ -202,8 +202,8 @@ class ConnectedWidget(QWidget):
             return
 
         chat_room_info = self.chat_rooms.currentItem().data(Qt.UserRole)
-        print(f"chat room name: {chat_room_info[0]}")
-        print(f"chat room host: {chat_room_info[1]}")
+        # print(f"chat room name: {chat_room_info[0]}")
+        # print(f"chat room host: {chat_room_info[1]}")
 
         self.client.join_room(chat_room_info)
 
