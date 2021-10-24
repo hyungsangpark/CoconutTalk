@@ -237,6 +237,23 @@ class ChatServer:
                             # A confirmation message. This closes fetch message thread waiting for incoming message.
                             send(sock, "EXITROOM_OK")
 
+                        elif data[0] == "CLIENTS_IN_ROOM":
+                            # TODO: send clients given room info.
+                            _, room_info = data
+
+                            clients: list[Client] = []
+                            # return_code = "UNKNOWN_ERROR"
+
+                            try:
+                                # clients_socket = self.group_chat_rooms[room_info]
+                                clients = [self.client_map[member] for member in self.group_chat_rooms[room_info]]
+                                print(f"clients: {clients}")
+                                return_code = "SUCCESS"
+                            except KeyError:
+                                return_code = "NO_SUCH_ROOM"
+
+                            send(sock, return_code, clients)
+
                         # Convention: ("MESSAGE", "room1", "Hello, World!")
                         elif data[0] == "MESSAGE":
                             # Send as new client's message...

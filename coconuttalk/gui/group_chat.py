@@ -1,9 +1,11 @@
 import time
+
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QDialog, QTextBrowser, QVBoxLayout, QLabel, QHBoxLayout, QLineEdit, QPushButton, QGridLayout
 
 from coconuttalk.chat.chat_client import ChatClient
 from coconuttalk.chat.utils import Client
-from coconuttalk.gui.fetch_utils import FetchMessage
+from coconuttalk.gui.fetch_utils import FetchMessage, FetchGroupMessage
 
 
 class GroupChatDialog(QDialog):
@@ -26,8 +28,9 @@ class GroupChatDialog(QDialog):
 
         self.init_ui()
 
-        self.fetch_message_thread = FetchMessage(client=self.client, parent=self)
+        self.fetch_message_thread = FetchGroupMessage(client=self.client, room_info=self.room_info, parent=self)
         self.fetch_message_thread.chat_fetched.connect(self.chats.append)
+        self.fetch_message_thread.members_fetched.connect(self.update_members)
         self.fetch_message_thread.start()
 
     def init_ui(self) -> None:
@@ -49,7 +52,7 @@ class GroupChatDialog(QDialog):
         # self.members.append("Alice (Host)")
         # self.members.append("James")
 
-        self.members.append(f"{self.client.nickname}(me)")
+        # self.members.append(f"{self.client.nickname}(me)")
 
         main_layout.addWidget(QLabel(f"{self.room_name} by {self.room_host[1]}"), 0, 0, 1, 2)
         main_layout.addWidget(QLabel("Members"), 0, 2)
@@ -96,3 +99,15 @@ class GroupChatDialog(QDialog):
 
     def invite(self):
         print("======== Invite is currently unimplemented. ========")
+
+    @pyqtSlot(object)
+    def update_members(self, members: list[Client]) -> None:
+        self.members.clear()
+
+        for member in members:
+            member_str = member[1]
+            if member == self.room_host:
+                member_str += " (Host)"
+            if member == self.client.client_object_from_server:
+                member_str += " (me)"
+            self.members.append(member_str)

@@ -115,3 +115,9 @@ class ChatClient:
 
     def send_message(self, room_info: tuple[str, Client], message: str) -> None:
         send(self.sock, "MESSAGE", room_info, message)
+
+    def fetch_clients_in_room(self, room_info: tuple[str, Client]) -> list[Client]:
+        send(self.sock, "CLIENTS_IN_ROOM", room_info)
+        result, clients_in_room = receive(self.sock)
+        print(f"clients_in_room: {clients_in_room}")
+        return clients_in_room
