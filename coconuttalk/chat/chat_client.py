@@ -1,7 +1,7 @@
 import select
 import ssl
 
-from coconuttalk.chat.utils import *
+from coconuttalk.chat.chat_utils import *
 
 
 class ChatClient:

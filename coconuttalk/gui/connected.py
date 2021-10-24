@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QWidget, QListWidget, QVBoxLayout, QLabel, QHBoxLayo
     QInputDialog, QMessageBox
 
 from coconuttalk.chat.chat_client import ChatClient
-from coconuttalk.chat.utils import *
+from coconuttalk.chat.chat_utils import *
 from coconuttalk.gui.fetch_utils import FetchServerUpdates
 from coconuttalk.gui.group_chat import GroupChatDialog
 from coconuttalk.gui.one_to_one_chat import OneToOneChatDialog
@@ -132,6 +132,7 @@ class ConnectedWidget(QWidget):
             notify_non_empty_nickname = QMessageBox()
             notify_non_empty_nickname.setText("Please select a user to chat.")
             notify_non_empty_nickname.exec()
+            self.fetch.start()
             return
 
         client_to_chat_nickname, client_to_chat_port = self.connected_clients.currentItem().data(Qt.UserRole)
@@ -154,6 +155,7 @@ class ConnectedWidget(QWidget):
                 notify_non_empty_nickname = QMessageBox()
                 notify_non_empty_nickname.setText("Unknown error has occurred during creation of the room.")
                 notify_non_empty_nickname.exec()
+                self.fetch.start()
                 return
 
         # Link to 1:1 chat and close connected screen.
@@ -199,6 +201,7 @@ class ConnectedWidget(QWidget):
             notify_unselected_chat_room = QMessageBox()
             notify_unselected_chat_room.setText("Please select a room to join.")
             notify_unselected_chat_room.exec()
+            self.fetch.start()
             return
 
         chat_room_info = self.chat_rooms.currentItem().data(Qt.UserRole)

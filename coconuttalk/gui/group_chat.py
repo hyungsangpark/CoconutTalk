@@ -4,7 +4,7 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QDialog, QTextBrowser, QVBoxLayout, QLabel, QHBoxLayout, QLineEdit, QPushButton, QGridLayout
 
 from coconuttalk.chat.chat_client import ChatClient
-from coconuttalk.chat.utils import Client
+from coconuttalk.chat.chat_utils import Client
 from coconuttalk.gui.fetch_utils import FetchMessage, FetchGroupMessage
 
 

@@ -3,7 +3,7 @@ import time
 from PyQt5.QtCore import QThread, pyqtSignal
 
 from coconuttalk.chat.chat_client import ChatClient
-from coconuttalk.chat.utils import Client
+from coconuttalk.chat.chat_utils import Client
 
 
 class FetchGroupMessage(QThread):

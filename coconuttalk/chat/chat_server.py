@@ -5,7 +5,7 @@ import ssl
 import sys
 import time
 
-from coconuttalk.chat.utils import *
+from coconuttalk.chat.chat_utils import *
 
 
 class ChatServer:
@@ -111,7 +111,7 @@ class ChatServer:
                     # handle all other messages into the server's socket.
                     try:
                         data = receive(sock)
-                        print(f"data: {data}")
+                        # print(f"data: {data}")
 
                         if data == ():
                             print(f'Chat server: {sock.fileno()} hung up')
@@ -124,11 +124,11 @@ class ChatServer:
                             self.clients -= 1
 
                         elif data[0] == "GET_UPDATES":
-                            print("UPDATE REQUEST RECEIVED")
+                            # print("UPDATE REQUEST RECEIVED")
                             # group_chat_room_names: list[tuple[str, Client]] = ()
 
                             # group_chat_room_names = list(map(lambda room: (room[0], self.client_map[self.get_client_socket(room[1])]), self.group_chat_rooms.keys()))
-                            print(f"group_chat_room_names: {list(self.group_chat_rooms.keys())}")
+                            # print(f"group_chat_room_names: {list(self.group_chat_rooms.keys())}")
                             send(sock, "CLIENTS", list(self.client_map.values()), "ROOMS", list(self.group_chat_rooms.keys()))
 
                         # Convention: ("CONNECT_ONE_TO_ONE", 13531)
