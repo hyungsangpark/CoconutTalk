@@ -17,6 +17,10 @@ joining group chats. This is done by a GUI program developed using PyQt5.
 - Python 3.7 or above
 - PyQt5
 
+### Recommended Version
+- Python 3.9 (Version used in the development of the program.)
+- PyQT5
+
 ### Installing
 
 Clone the following repository using preferred method of Git commands, and the main program will be contained inside 
@@ -31,7 +35,7 @@ git clone https://github.com/SOFTENG-364-2021/assignment2_pychat-hpar461.git
 
 ### Executing program
 
-Essentially, open terminal and run `main.py` in the root directory of this repository.
+Essentially, open terminal and run `client.py` or `server.py` accordingly from the root directory of this repository.
 
 Before running the program, make sure the command used to run python is actually python 3 and has version python 3.7 
 or above. To do this, you can run the command: `python --version` to see what version of the python your computer is 
@@ -44,11 +48,20 @@ Assuming Python is installed on your computer AND the current working directory 
 root directory of the repository, the method to run this application through terminal is as follows:
 
 ```bash
-python main.py
+python client.py
 ```
+or
+```bash
+python server.py
+```
+
 
 In case of Mac, it's as follows:
 
 ```bash
-python3 main.py
+python3 client.py
+```
+or
+```bash
+python3 server.py
 ```
